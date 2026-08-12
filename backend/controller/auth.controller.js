@@ -123,7 +123,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentails " });
     }
 
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    const { accessToken, refreshToken } = generateToken(user._id);
 
     await storeRefreshToken(user._id, refreshToken);
 
@@ -167,4 +167,39 @@ export const logout = async (req, res) => {
   }
 };
 
-export const refreshToken = async (req, res) => {};
+export const refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Refresh token not found" });
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const storedRefreshToken = await redis.get(
+      `refreshToken:${decoded.userId}`,
+    );
+
+    if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const accessToken = await jwt.sign(
+      { userId: decoded.userId },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "15m" },
+    );
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.json({ message: "Token Refresh successfully" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

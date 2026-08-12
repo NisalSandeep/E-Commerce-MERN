@@ -7,6 +7,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 import { connectDb } from "./lib/db.js";
 import authRoutes from "./routes/auth.route.js";
+import productRoutes from "./routes/product.route.js";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.get("/health", (req, res) => {
 app.use(express.json());
 app.use(cookieParser())
 app.use("/api/auth",authRoutes );
+app.use("/api/products",productRoutes );
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
